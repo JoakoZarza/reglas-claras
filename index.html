@@ -1,0 +1,954 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Prototipo independiente que explica el proyecto de ordenanza de habilitaci&oacute;n comercial de Posadas: simulador, demo del tr&aacute;mite y manuales por rubro.">
+<meta name="theme-color" content="#3a1863"><title>Reglas Claras Posadas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout (mobile first): una columna con barra de navegación abajo, al alcance del pulgar; desde 768 px la navegación sube al encabezado y las secciones se abren en columnas. El amarillo es la "oblea" de habilitación de la vidriera y marca solo lo accionable o lo aprobado; el violeta es la tinta del sello */
+:root {
+  --paper: #f8f6fb;
+  --surface: #ffffff;
+  --ink: #1c1230;
+  --ink-2: #4f4763;
+  --muted: #776f8d;
+  --rule: #e4dcef;
+  --violet: #5a2a8f;
+  --violet-ink: #3a1863;
+  --violet-wash: #efe8f9;
+  --yellow: #f8c630;
+  --yellow-wash: #fff6d6;
+  --on-yellow: #241500;
+  --on-violet: #ffffff;
+  --ok: #1d7448; --ok-wash: #e2f3e9;
+  --warn: #935600; --warn-wash: #fcefd6;
+  --crit: #ad2a1f; --crit-wash: #fae4e1;
+  --f-display: "Unbounded", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --space-section: 64px;
+  --header-h: 56px;
+  --tabbar-h: 64px;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #120d1b; --surface: #1b1428; --ink: #f2edfa; --ink-2: #cdc4de; --muted: #9a90b0; --rule: #2f2643;
+    --violet: #b991f2; --violet-ink: #22133b; --violet-wash: #261c3a;
+    --yellow: #ffd247; --yellow-wash: #352c12; --on-yellow: #221400; --on-violet: #ffffff;
+    --ok: #74d6a3; --ok-wash: #15301f; --warn: #f1b75e; --warn-wash: #352711; --crit: #ff8d82; --crit-wash: #3a1918;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #120d1b; --surface: #1b1428; --ink: #f2edfa; --ink-2: #cdc4de; --muted: #9a90b0; --rule: #2f2643;
+  --violet: #b991f2; --violet-ink: #22133b; --violet-wash: #261c3a;
+  --yellow: #ffd247; --yellow-wash: #352c12; --on-yellow: #221400; --on-violet: #ffffff;
+  --ok: #74d6a3; --ok-wash: #15301f; --warn: #f1b75e; --warn-wash: #352711; --crit: #ff8d82; --crit-wash: #3a1918;
+  color-scheme: dark;
+}
+
+/* ---------- Base (celular) ---------- */
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 12px); }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.65; padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); -webkit-tap-highlight-color: transparent; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--violet-ink); }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; text-wrap: balance; margin: 0; }
+h2 { font-size: 1.4rem; }
+h3 { font-size: 1.02rem; line-height: 1.35; }
+p { margin: 0; }
+a { color: var(--violet); }
+:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; border-radius: 4px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.label { font-family: var(--f-mono); font-size: 0.74rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--ink-2); max-width: 58ch; }
+.note { font-size: 0.9rem; color: var(--muted); line-height: 1.6; max-width: 70ch; }
+.head { display: grid; gap: 12px; }
+.block { display: grid; gap: 24px; }
+
+/* Encabezado compacto */
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 6; background: var(--violet-ink); color: var(--on-violet); }
+.top .wrap { display: flex; align-items: center; gap: 12px; height: var(--header-h); }
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--f-display); font-weight: 700; font-size: 0.98rem; color: var(--on-violet); text-decoration: none; }
+.brand-mark { width: 24px; height: 24px; border-radius: 50%; background: var(--yellow); box-shadow: inset 0 0 0 4px var(--violet-ink), 0 0 0 2px var(--yellow); flex: none; }
+.proto-badge { margin-left: auto; font-family: var(--f-mono); font-size: 0.68rem; letter-spacing: 0.08em; padding: 4px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.1); color: var(--yellow); white-space: nowrap; }
+
+/* Navegación: barra inferior en celular */
+nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--violet-ink); display: grid; grid-template-columns: repeat(4, 1fr); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); box-shadow: 0 -10px 30px -20px rgba(0, 0, 0, .5); }
+nav.tabs a { position: relative; height: var(--tabbar-h); display: grid; place-content: center; justify-items: center; gap: 4px; color: var(--on-violet); text-decoration: none; font-size: 0.72rem; font-weight: 700; opacity: 0.68; transition: opacity .2s; }
+nav.tabs a svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+nav.tabs a::after { content: ""; position: absolute; top: 0; left: 28%; right: 28%; height: 3px; border-radius: 0 0 3px 3px; background: var(--yellow); transform: scaleX(0); transition: transform .3s var(--ease); }
+nav.tabs a[aria-current="page"] { opacity: 1; color: var(--yellow); }
+nav.tabs a[aria-current="page"]::after { transform: scaleX(1); }
+nav.tabs .long { display: none; }
+
+main { padding-block: 36px 28px; }
+section.view { display: grid; gap: var(--space-section); }
+section.view.compact { gap: 40px; }
+
+/* Botones y controles: objetivos táctiles de 48 px */
+.btn { font: inherit; font-weight: 700; border: 0; border-radius: 999px; min-height: 48px; padding: 12px 22px; cursor: pointer; background: var(--yellow); color: var(--on-yellow); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 10px; transition: transform .2s var(--ease), box-shadow .2s; }
+.btn:active { transform: scale(.98); }
+.btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--rule); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn .arr { transition: transform .2s var(--ease); }
+input[type="number"], input[type="text"], select { font: inherit; font-size: 16px; min-height: 48px; padding: 11px 14px; border-radius: 12px; border: 1.5px solid var(--rule); background: var(--surface); color: var(--ink); width: 100%; transition: border-color .2s; }
+input:focus, select:focus { border-color: var(--violet); outline: none; box-shadow: 0 0 0 4px var(--violet-wash); }
+.check { display: flex; gap: 12px; align-items: flex-start; line-height: 1.5; padding-block: 4px; }
+.check input { margin-top: 3px; width: 20px; height: 20px; accent-color: var(--violet); flex: none; }
+.check label { flex: 1; }
+.field { display: grid; gap: 8px; }
+.field label { font-weight: 700; font-size: 0.96rem; }
+.field .hint { font-size: 0.84rem; color: var(--muted); line-height: 1.5; }
+
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; padding: 4px 11px; border-radius: 999px; justify-self: start; line-height: 1.4; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+.pill.ok { background: var(--ok-wash); color: var(--ok); }
+.pill.warn { background: var(--warn-wash); color: var(--warn); }
+.pill.crit { background: var(--crit-wash); color: var(--crit); }
+.pill.neutral { background: var(--violet-wash); color: var(--violet); }
+.pill.neutral::before { display: none; }
+
+/* Inicio: portada */
+.hero { display: grid; gap: 36px; }
+.hero-copy { display: grid; gap: 22px; }
+.hero h1 { font-size: clamp(1.9rem, 8.4vw, 3.9rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.025em; }
+.hero h1 em { font-style: normal; color: var(--violet); }
+.hero .actions { display: grid; gap: 10px; }
+.oblea-wrap { display: grid; place-items: center; }
+.oblea { width: min(72vw, 240px); aspect-ratio: 1; max-width: 100%; border-radius: 50%; background: var(--yellow); color: var(--on-yellow); display: grid; place-content: center; text-align: center; gap: 5px; transform: rotate(-8deg); box-shadow: 0 24px 50px -28px rgba(58, 24, 99, .55), inset 0 0 0 9px var(--yellow), inset 0 0 0 11px var(--on-yellow); transition: transform .5s var(--ease); }
+.oblea .o-top, .oblea .o-bot { font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.oblea .o-main { font-family: var(--f-display); font-weight: 800; font-size: 1.3rem; letter-spacing: -0.02em; line-height: 1; }
+.oblea .o-cat { font-family: var(--f-display); font-weight: 700; font-size: 0.92rem; }
+.oblea .o-line { width: 60%; height: 1.5px; background: var(--on-yellow); margin: 5px auto; opacity: .5; }
+
+/* Inicio: hoy vs. propuesta */
+.versus { display: grid; border-top: 1px solid var(--rule); }
+.versus > div { padding-block: 26px; display: grid; gap: 16px; align-content: start; }
+.versus > div + div { border-top: 1px solid var(--rule); }
+.versus ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.versus li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; color: var(--ink-2); }
+.versus li::before { content: "–"; color: var(--muted); font-weight: 700; }
+.versus .new li::before { content: "✓"; color: var(--violet); }
+.versus .new h3 { box-shadow: inset 0 -0.42em 0 var(--yellow-wash); justify-self: start; }
+
+/* Inicio: matriz de categorías */
+.matrix { display: grid; border-top: 2px solid var(--ink); }
+.mrow { display: grid; grid-template-columns: 48px minmax(0, 1fr); column-gap: 16px; row-gap: 14px; padding-block: 24px; border-bottom: 1px solid var(--rule); align-items: start; }
+.mrow.mhead { display: none; }
+.mrow .letter { font-family: var(--f-display); font-weight: 800; font-size: 2.1rem; line-height: 1; color: var(--violet); grid-row: span 4; }
+.mrow .cell { display: grid; gap: 4px; min-width: 0; grid-column: 2; }
+.mrow .cell.ej { gap: 10px; }
+.mrow b { font-weight: 700; }
+
+/* Inicio: los nueve ejes (videos p1 a p9) */
+.ejes { list-style: none; margin: 0; padding: 0; display: grid; column-gap: 40px; }
+.ejes li { border-top: 1px solid var(--rule); padding-block: 18px 20px; display: grid; grid-template-columns: 34px 1fr; column-gap: 12px; row-gap: 4px; align-content: start; }
+.ejes .n { font-family: var(--f-mono); font-size: 0.8rem; color: var(--violet); grid-row: span 2; padding-top: 2px; }
+.ejes strong { font-size: 1rem; }
+.ejes span.d { color: var(--ink-2); font-size: 0.94rem; line-height: 1.55; }
+
+/* Simulador: en celular, rubro y m² → resultado → costos */
+.sim { display: grid; gap: 32px; }
+.sim-main, .sim-costs { display: grid; gap: 22px; }
+.sim-costs { padding-top: 26px; border-top: 1px solid var(--rule); }
+.result { background: var(--surface); border-radius: 22px; padding: 22px 20px; display: grid; gap: 24px; box-shadow: 0 1px 0 var(--rule), 0 30px 60px -40px rgba(58, 24, 99, .35); min-width: 0; scroll-margin-top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 12px); }
+.verdict { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
+.verdict .big { width: 68px; height: 68px; border-radius: 50%; display: grid; place-items: center; font-family: var(--f-display); font-weight: 800; font-size: 2rem; background: var(--yellow); color: var(--on-yellow); box-shadow: inset 0 0 0 5px var(--yellow), inset 0 0 0 6.5px var(--on-yellow); transform: rotate(-8deg); }
+.verdict .big.pop { animation: pop .45s var(--ease); }
+@keyframes pop { 0% { transform: rotate(-8deg) scale(.7); } 60% { transform: rotate(-4deg) scale(1.08); } 100% { transform: rotate(-8deg) scale(1); } }
+.verdict h3 { font-size: 1.05rem; }
+.verdict-text { display: grid; gap: 8px; min-width: 0; }
+.verdict-text .note { grid-column: 1 / -1; }
+.motivo { margin-top: -8px; }
+.facts { display: grid; gap: 14px; border-block: 1px solid var(--rule); padding-block: 18px; }
+.fact { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: baseline; }
+.fact .v { font-weight: 700; line-height: 1.4; }
+.money { display: grid; gap: 14px; }
+.bar-row { display: grid; grid-template-columns: 1fr auto; column-gap: 12px; row-gap: 6px; align-items: center; font-size: 0.94rem; }
+.bar-row .track { grid-column: 1 / -1; order: 3; }
+.track { height: 10px; position: relative; }
+.track::before { content: ""; position: absolute; inset: 4px 0; background: var(--rule); border-radius: 1px; }
+.track i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0; background: var(--violet); transition: width .6s var(--ease); min-width: 2px; }
+.track i.y { background: var(--yellow); box-shadow: inset 0 0 0 1px rgba(36, 21, 0, .18); }
+.saving { background: var(--yellow-wash); border-radius: 16px; padding: 18px 18px; display: grid; gap: 6px; }
+.saving .num { font-family: var(--f-display); font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; overflow-wrap: anywhere; }
+.sample-tag { font-family: var(--f-mono); font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--warn); }
+/* Resumen flotante del simulador, sobre la barra inferior */
+.sim-float { position: fixed; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 10px); z-index: 5; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 8px 8px 10px; border: 0; border-radius: 999px; background: var(--surface); color: var(--ink); font: inherit; text-align: left; box-shadow: 0 0 0 1px var(--rule), 0 14px 34px -14px rgba(58, 24, 99, .5); cursor: pointer; transform: translateY(0); transition: transform .3s var(--ease), opacity .3s; }
+.sim-float.off { transform: translateY(140%); opacity: 0; pointer-events: none; }.sim-float .f-cat { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--yellow); color: var(--on-yellow); font-family: var(--f-display); font-weight: 800; flex: none; }
+.sim-float .f-txt { flex: 1; min-width: 0; display: grid; line-height: 1.25; }
+.sim-float .f-txt b { font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sim-float .f-go { font-size: 0.8rem; font-weight: 700; padding: 8px 12px; border-radius: 999px; background: var(--violet-wash); color: var(--violet); white-space: nowrap; }
+
+/* Demo del trámite */
+.stepper { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); list-style: none; padding: 0; margin: 0; }
+.stepper li { position: relative; display: grid; justify-items: start; font-size: 0.9rem; font-weight: 700; color: var(--muted); }
+.stepper li::before { content: ""; position: absolute; top: 15px; left: 38px; right: 6px; height: 2px; background: var(--rule); }
+.stepper li:last-child::before { display: none; }
+.stepper li.done::before { background: var(--violet); }
+.stepper .dot { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); box-shadow: inset 0 0 0 2px var(--rule); color: var(--muted); font-family: var(--f-mono); font-size: 0.85rem; position: relative; z-index: 1; transition: background .3s, color .3s, box-shadow .3s; }
+.stepper .t { display: none; }
+.stepper li.now { color: var(--ink); }
+.stepper li.now .dot { background: var(--violet); color: var(--on-violet); box-shadow: 0 0 0 5px var(--violet-wash); }
+.stepper li.done .dot { background: var(--yellow); color: var(--on-yellow); box-shadow: none; }
+.step-now { margin-top: -22px; }
+.step-body { background: var(--surface); border-radius: 22px; padding: 22px 18px; display: grid; gap: 24px; box-shadow: 0 1px 0 var(--rule), 0 30px 60px -44px rgba(58, 24, 99, .3); }
+.step-body.bare { background: transparent; box-shadow: none; padding: 0; }
+.grid2 { display: grid; gap: 20px; }
+.nav-row { display: flex; flex-direction: column-reverse; gap: 10px; padding-top: 4px; }
+.nav-row .btn { width: 100%; }
+.nav-row > span:empty { display: none; }
+.cert { position: relative; overflow: hidden; border-radius: 22px; background: var(--surface); padding: 24px 20px; display: grid; gap: 20px; box-shadow: inset 0 0 0 2px var(--violet), 0 30px 60px -40px rgba(58, 24, 99, .4); }
+.cert::after { content: "PROTOTIPO\A SIN VALIDEZ"; position: absolute; inset: 0; display: grid; place-items: center; text-align: center; line-height: 1.1; font-family: var(--f-display); font-weight: 800; font-size: 2rem; color: var(--crit); opacity: 0.12; transform: rotate(-20deg); pointer-events: none; white-space: pre; }
+.cert-head { display: grid; gap: 6px; border-bottom: 1px dashed var(--rule); padding-bottom: 16px; }
+.cert dl { display: grid; grid-template-columns: 1fr; gap: 2px; margin: 0; }
+.cert dt { color: var(--muted); font-size: 0.86rem; }
+.cert dd { margin: 0 0 12px; font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.reuse { display: grid; gap: 12px; }
+.reuse ul { padding: 0; margin: 0; display: grid; gap: 12px; list-style: none; }
+.reuse li { display: grid; gap: 4px; justify-items: start; }
+
+/* Manuales */
+.lib-tools { display: grid; gap: 14px; }
+.chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); padding-inline: max(16px, env(safe-area-inset-left, 0px)); padding-block: 2px; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { font: inherit; font-size: 0.88rem; font-weight: 700; min-height: 42px; padding: 8px 16px; border-radius: 999px; border: 0; box-shadow: inset 0 0 0 1.5px var(--rule); background: transparent; color: var(--ink-2); cursor: pointer; white-space: nowrap; flex: none; transition: background .2s, color .2s, box-shadow .2s; }
+.chip[aria-pressed="true"] { background: var(--violet); box-shadow: none; color: var(--on-violet); }
+.lib { display: grid; column-gap: 40px; border-top: 2px solid var(--ink); }
+.man { text-align: left; font: inherit; color: inherit; cursor: pointer; display: grid; gap: 10px; align-content: start; background: transparent; border: 0; border-bottom: 1px solid var(--rule); padding: 20px 0 22px; transition: padding .3s var(--ease); }
+.man .code { font-family: var(--f-mono); font-size: 0.76rem; color: var(--muted); }
+.man .meta { display: flex; gap: 8px; flex-wrap: wrap; }
+.man-detail { background: var(--surface); border-radius: 22px; padding: 22px 18px; display: grid; gap: 24px; box-shadow: 0 1px 0 var(--rule), 0 30px 60px -44px rgba(58, 24, 99, .3); scroll-margin-top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 12px); }
+.man-detail h2 { font-size: 1.25rem; }
+.md-head { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+.md-head .btn { min-height: 40px; padding: 8px 14px; flex: none; }
+.chapters { display: grid; gap: 28px; }
+.chapter { display: grid; gap: 12px; align-content: start; }
+.chapter h3 { font-size: 0.98rem; }
+.chapter ul { margin: 0; padding: 0; display: grid; gap: 8px; }
+.chapter li { list-style: none; }
+.empty { color: var(--muted); padding-block: 32px; }
+
+footer.foot { border-top: 1px solid var(--rule); }
+/* Abajo queda lugar para el globo del simulador, así no tapa el último renglón */
+footer.foot .wrap { padding-block: 28px 96px; font-size: 0.86rem; color: var(--muted); display: grid; gap: 8px; }
+
+/* Transiciones entre secciones y pasos */
+.enter > * { animation: rise .55s var(--ease) both; animation-delay: calc(var(--i, 0) * 70ms); }
+@keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.fade-in { animation: rise .4s var(--ease) both; }
+
+/* ---------- Celular grande (≥ 480 px) ---------- */
+@media (min-width: 480px) {
+  .hero .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+  .stepper .t { display: block; font-size: 0.78rem; line-height: 1.3; margin-top: 10px; padding-right: 8px; }
+  .step-now { display: none; }
+  .cert dl { grid-template-columns: max-content 1fr; gap: 12px 24px; }
+  .cert dd { margin: 0; }
+  .cert-head { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: baseline; }
+  .reuse li { display: flex; gap: 12px; align-items: center; }
+  .nav-row { flex-direction: row; justify-content: space-between; }
+  .nav-row .btn { width: auto; }
+  .nav-row > span:empty { display: block; }
+  .bar-row { grid-template-columns: 116px minmax(0, 1fr) auto; }
+  .bar-row .track { grid-column: auto; order: 0; }
+}
+
+/* ---------- Tablet (≥ 768 px): navegación arriba ---------- */
+@media (min-width: 768px) {
+  :root { --space-section: 96px; --header-h: 60px; }
+  body { font-size: 17px; line-height: 1.7; padding-bottom: 0; }
+  h2 { font-size: clamp(1.6rem, 3vw, 2.1rem); }
+  h3 { font-size: 1.08rem; }
+  .lead { font-size: 1.15rem; }
+  .top .wrap { gap: 24px; }
+  .proto-badge { margin-left: 0; order: 2; }
+  nav.tabs { position: static; display: flex; gap: 4px; margin-left: auto; order: 3; background: transparent; box-shadow: none; padding: 0; }
+  nav.tabs a { height: var(--header-h); display: flex; align-items: center; padding: 0 12px; font-size: 0.95rem; }
+  nav.tabs a svg { display: none; }
+  nav.tabs a::after { top: auto; bottom: 0; left: 12px; right: 12px; border-radius: 3px 3px 0 0; }
+  nav.tabs a[aria-current="page"] { color: var(--on-violet); }
+  nav.tabs a:hover { opacity: 1; }
+  nav.tabs .long { display: inline; }
+  nav.tabs .short { display: none; }
+  main { padding-block: 64px 48px; }
+  section.view.compact { gap: 48px; }
+  .block { gap: 28px; }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px -8px rgba(90, 42, 143, .45); }
+  .btn.ghost:hover { box-shadow: inset 0 0 0 1.5px var(--violet); }
+  .btn:hover .arr { transform: translateX(3px); }
+  .versus { grid-template-columns: 1fr 1fr; }
+  .versus > div { padding-block: 36px; }
+  .versus > div:first-child { padding-right: 40px; }
+  .versus > div + div { border-top: 0; border-left: 1px solid var(--rule); padding-left: 40px; }
+  .mrow { grid-template-columns: 64px minmax(0, 1fr) minmax(0, 1fr); row-gap: 18px; padding-block: 28px; }
+  .mrow .letter { font-size: 2.6rem; grid-row: span 3; }
+  .mrow .cell { grid-column: auto; }
+  .mrow .cell.ej { grid-column: 2 / -1; }
+  .ejes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ejes li { grid-template-columns: 1fr; padding-block: 22px 26px; row-gap: 8px; }
+  .ejes .n { grid-row: auto; }
+  .grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 28px; }
+  .step-body, .man-detail { padding: 36px; gap: 28px; }
+  .cert { padding: 40px; }
+  .cert::after { content: "PROTOTIPO · SIN VALIDEZ"; white-space: nowrap; font-size: 2.6rem; transform: rotate(-14deg); }
+  .lib-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+  .lib-tools input { max-width: 340px; }
+  .chips { margin: 0; padding: 0; overflow: visible; flex-wrap: wrap; }
+  .chip:hover { box-shadow: inset 0 0 0 1.5px var(--violet); }
+  .lib { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .man:hover { padding-left: 8px; }
+  .man:hover h3 { color: var(--violet); }
+  .man-detail h2 { font-size: clamp(1.3rem, 3vw, 1.8rem); }
+  .chapters { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 44px; }
+  .result { padding: 32px; gap: 28px; }
+  .facts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .fact { grid-template-columns: 1fr; gap: 4px; }
+  .saving { padding: 22px 24px; }
+  .saving .num { font-size: 2.2rem; }
+  .verdict .big { width: 84px; height: 84px; font-size: 2.5rem; }
+  .verdict h3 { font-size: 1.2rem; }
+  .oblea { width: 280px; }
+  .oblea .o-main { font-size: 1.55rem; }
+  .oblea:hover { transform: rotate(-3deg) scale(1.02); }
+  .sim-float { display: none; }
+  footer.foot .wrap { padding-block: 32px 40px; }
+}
+
+/* ---------- Escritorio (≥ 960 px) ---------- */
+@media (min-width: 960px) {
+  :root { --space-section: 112px; }
+  .hero { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 72px; align-items: center; }
+  .hero-copy { gap: 28px; }
+  .oblea { width: 300px; }
+  .oblea .o-main { font-size: 1.65rem; }
+  .mrow { grid-template-columns: 90px minmax(0, 2.2fr) repeat(3, minmax(0, 1fr)); gap: 24px; }
+  .mrow.mhead { display: grid; padding-block: 12px; }
+  .mrow .letter { grid-row: auto; }
+  .mrow .cell.ej { grid-column: auto; }
+  .mrow .cell > .label { display: none; }
+  .ejes { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 48px; }
+  .sim { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); grid-template-areas: "main result" "costs result"; column-gap: 64px; row-gap: 26px; align-items: start; }
+  .sim-main { grid-area: main; }
+  .sim-costs { grid-area: costs; }
+  .result { grid-area: result; position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--header-h) + 24px); padding: 36px; }
+  .grid2.wide { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#inicio"><span class="brand-mark" aria-hidden="true"></span>Reglas Claras</a>
+    <span class="proto-badge" title="Plataforma independiente. No es un sitio de la Municipalidad de Posadas y no realiza trámites reales.">PROTOTIPO</span>
+    <nav class="tabs" aria-label="Secciones">
+      <a href="#inicio" data-view="inicio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20h-5.5v-5.5h-5V20H4z"/></svg>Inicio</a>
+      <a href="#simulador" data-view="simulador"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="10" cy="17" r="2"/></svg>Simulador</a>
+      <a href="#tramite" data-view="tramite"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5h6M8.5 11l2 2 4-4M8.5 17h7"/></svg><span class="short">Trámite</span><span class="long">Demo del trámite</span></a>
+      <a href="#manuales" data-view="manuales"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5A1.5 1.5 0 0 1 6.5 4H19v14H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19"/></svg>Manuales</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- INICIO -->
+  <section class="view" id="v-inicio" data-view="inicio">
+    <div class="hero">
+      <div class="hero-copy">
+        <span class="label">Proyecto de ordenanza · Posadas, Misiones</span>
+        <h1>Abrí tu comercio primero. <em>El control viene después.</em></h1>
+        <p class="lead">Hoy el comerciante paga alquiler, luz, agua y sellados durante meses sin poder abrir. Reglas Claras propone habilitar con una Declaración Jurada y dejar la inspección para después de la apertura, salvo en los rubros de riesgo crítico.</p>
+        <div class="actions">
+          <a class="btn" href="#simulador">Simular mi comercio <span class="arr" aria-hidden="true">→</span></a>
+          <a class="btn ghost" href="#tramite">Ver cómo sería el trámite</a>
+        </div>
+        <p class="note">Prototipo independiente. No es un sitio de la Municipalidad de Posadas y no realiza trámites reales.</p>
+      </div>
+      <div class="oblea-wrap" aria-hidden="true">
+        <div class="oblea">
+          <span class="o-top">Declaración Jurada</span>
+          <span class="o-main">HABILITADO</span>
+          <span class="o-line"></span>
+          <span class="o-cat">Categoría A</span>
+          <span class="o-bot">en el acto · ejemplo</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="head">
+        <span class="label">Qué cambia</span>
+        <h2>De pedir permiso a declarar y responder</h2>
+      </div>
+      <div class="versus">
+        <div>
+          <h3>Hoy</h3>
+          <ul>
+            <li>La habilitación depende de una inspección previa y de plazos sin fecha.</li>
+            <li>Se pagan costos fijos durante meses sin poder facturar.</li>
+            <li>La Habilitación Express de 2024 solo alcanza locales de hasta 100 m².</li>
+            <li>Los gestores cobran por manuales que son copias.</li>
+          </ul>
+        </div>
+        <div class="new">
+          <h3>Con Reglas Claras</h3>
+          <ul>
+            <li>Los locales de bajo riesgo de hasta 300 m² abren en el acto.</li>
+            <li>Entre 300 y 800 m², el Municipio responde en 3 días hábiles.</li>
+            <li>Falsear la declaración implica clausura y denuncia penal.</li>
+            <li>Manuales gratuitos y 12 meses sin Tasa de Comercio.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="head">
+        <span class="label">Las tres categorías</span>
+        <h2>Cada local se clasifica por superficie y por riesgo</h2>
+      </div>
+      <div class="matrix" role="table" aria-label="Categorías de habilitación">
+        <div class="mrow mhead" role="row">
+          <span class="label" role="columnheader">Cat.</span>
+          <span class="label" role="columnheader">Rubros</span>
+          <span class="label" role="columnheader">Superficie</span>
+          <span class="label" role="columnheader">Inspección</span>
+          <span class="label" role="columnheader">Certificado</span>
+        </div>
+        <div class="mrow" role="row">
+          <span class="letter" role="cell">A</span>
+          <div class="cell ej" role="cell"><span class="pill ok">Bajo riesgo</span><span>Kioscos, despensas, ropa, calzado, oficinas, librerías, peluquerías y gastronomía de pequeña escala.</span></div>
+          <div class="cell" role="cell"><span class="label">Superficie</span><b class="mono">hasta 300 m²</b></div>
+          <div class="cell" role="cell"><span class="label">Inspección</span><b>Posterior</b></div>
+          <div class="cell" role="cell"><span class="label">Certificado</span><b>En el acto</b></div>
+        </div>
+        <div class="mrow" role="row">
+          <span class="letter" role="cell">B</span>
+          <div class="cell ej" role="cell"><span class="pill warn">Riesgo moderado</span><span>Locales medianos que no desarrollan actividades de riesgo crítico.</span></div>
+          <div class="cell" role="cell"><span class="label">Superficie</span><b class="mono">300 a 800 m²</b></div>
+          <div class="cell" role="cell"><span class="label">Inspección</span><b>Revisión de carpeta y control posterior</b></div>
+          <div class="cell" role="cell"><span class="label">Certificado</span><b>Hasta 3 días hábiles</b></div>
+        </div>
+        <div class="mrow" role="row">
+          <span class="letter" role="cell">C</span>
+          <div class="cell ej" role="cell"><span class="pill crit">Riesgo crítico</span><span>Fábricas de alimentos, depósitos peligrosos, clínicas con internación, guarderías y hoteles grandes.</span></div>
+          <div class="cell" role="cell"><span class="label">Superficie</span><b class="mono">más de 800 m² o rubro crítico</b></div>
+          <div class="cell" role="cell"><span class="label">Inspección</span><b>Previa y obligatoria</b></div>
+          <div class="cell" role="cell"><span class="label">Certificado</span><b>Tras dictamen favorable</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="head">
+        <span class="label">Los nueve ejes del proyecto</span>
+        <h2>Lo que propone, punto por punto</h2>
+      </div>
+      <ol class="ejes">
+        <li><span class="n">p1</span><strong>Declaración Jurada</strong><span class="d">Habilitación inmediata con responsabilidad individual.</span></li>
+        <li><span class="n">p2</span><strong>Normas sanitarias vigentes</strong><span class="d">Código Alimentario, Ley Sanitaria y Uso del Suelo se mantienen.</span></li>
+        <li><span class="n">p3</span><strong>Categoría A</strong><span class="d">Hasta 300 m², con certificado digital en el acto.</span></li>
+        <li><span class="n">p4</span><strong>Categorías B y C</strong><span class="d">Tres días hábiles o inspección previa, según el riesgo.</span></li>
+        <li><span class="n">p5</span><strong>Gastronomía y primer aviso</strong><span class="d">Plazo para corregir faltas menores sin cerrar el local.</span></li>
+        <li><span class="n">p6</span><strong>Tres causas de clausura</strong><span class="d">Plazo vencido, peligro grave o documentación falsa.</span></li>
+        <li><span class="n">p7</span><strong>Portabilidad documental</strong><span class="d">Se reutilizan los certificados vigentes del mismo local.</span></li>
+        <li><span class="n">p8</span><strong>Fondo de comercio</strong><span class="d">Transferencia con los datos que ya tiene el Municipio.</span></li>
+        <li><span class="n">p9</span><strong>Manuales y alivio fiscal</strong><span class="d">Manuales gratuitos y 12 meses sin Tasa de Comercio.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- SIMULADOR -->
+  <section class="view compact" id="v-simulador" data-view="simulador" hidden>
+    <div class="head">
+      <span class="label">Simulador</span>
+      <h2>¿Qué pasaría con mi comercio?</h2>
+      <p class="lead">Elegí el rubro y la superficie. El simulador te dice en qué categoría caerías y cuánto dinero dejarías de perder esperando la habilitación.</p>
+    </div>
+    <div class="sim" id="sim">
+      <div class="sim-main">
+        <div class="field">
+          <label for="s-rubro">Rubro</label>
+          <select id="s-rubro"></select>
+        </div>
+        <div class="field">
+          <label for="s-m2">Superficie del local (m²)</label>
+          <input type="number" id="s-m2" min="1" step="1" value="140" inputmode="numeric">
+        </div>
+      </div>
+      <div class="result" id="sim-result" aria-live="polite"></div>
+      <div class="sim-costs">
+        <span class="label">Costos mientras esperás · valores de ejemplo</span>
+        <div class="field">
+          <label for="s-alquiler">Alquiler (ARS por mes)</label>
+          <input type="number" id="s-alquiler" min="0" step="1000" value="650000" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="s-servicios">Luz, agua y otros servicios (ARS por mes)</label>
+          <input type="number" id="s-servicios" min="0" step="1000" value="120000" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="s-meses">¿Cuántos meses tarda hoy la habilitación?</label>
+          <input type="number" id="s-meses" min="0" step="0.5" value="3" inputmode="decimal">
+          <span class="hint">Dato de ejemplo. Hay que reemplazarlo por el promedio real de Posadas.</span>
+        </div>
+        <div class="field">
+          <label for="s-tasa">Tasa de Comercio estimada (ARS por mes)</label>
+          <input type="number" id="s-tasa" min="0" step="1000" value="35000" inputmode="numeric">
+        </div>
+        <div class="check">
+          <input type="checkbox" id="s-gestor" checked>
+          <label for="s-gestor">Pagaría un gestor por los manuales (aprox. USD 100)</label>
+        </div>
+        <div class="field">
+          <label for="s-dolar">Dólar de referencia (ARS)</label>
+          <input type="number" id="s-dolar" min="0" step="10" value="1450" inputmode="numeric">
+        </div>
+      </div>
+    </div>
+    <p class="note" id="sim-end">Las reglas de clasificación salen del informe sobre el proyecto de ordenanza. Antes de difundir el simulador hay que confirmarlas con el texto oficial y reemplazar los costos de ejemplo por datos reales.</p>
+    <button type="button" class="sim-float off" id="sim-float" aria-label="Ver el resultado de la simulación">
+      <span class="f-cat" id="f-cat">A</span>
+      <span class="f-txt"><span class="label">Ahorro estimado</span><b class="mono" id="f-ah"></b></span>
+      <span class="f-go">Ver resultado</span>
+    </button>
+  </section>
+
+  <!-- DEMO DEL TRÁMITE -->
+  <section class="view compact" id="v-tramite" data-view="tramite" hidden>
+    <div class="head">
+      <span class="label">Demo del trámite</span>
+      <h2>Así podría ser habilitar un comercio</h2>
+      <p class="lead">Un recorrido de ejemplo. Los datos ya vienen cargados con un comercio ficticio; podés cambiarlos y avanzar.</p>
+    </div>
+    <ol class="stepper" id="stepper">
+      <li data-step="0"><span class="dot">1</span><span class="t">Datos del comercio</span></li>
+      <li data-step="1"><span class="dot">2</span><span class="t">Local y documentos</span></li>
+      <li data-step="2"><span class="dot">3</span><span class="t">Declaración Jurada</span></li>
+      <li data-step="3"><span class="dot">4</span><span class="t">Resultado</span></li>
+    </ol>
+    <p class="label step-now" id="step-now">Paso 1 de 4</p>
+    <div class="step-body" id="step-0">
+      <h3>Datos del comercio</h3>
+      <div class="grid2">
+        <div class="field"><label for="d-nombre">Nombre de fantasía</label><input type="text" id="d-nombre" value="Librería El Lapicero (ejemplo)"></div>
+        <div class="field"><label for="d-titular">Titular</label><input type="text" id="d-titular" value="María Ejemplo"></div>
+        <div class="field"><label for="d-cuit">CUIT</label><input type="text" id="d-cuit" value="27-00000000-0" class="mono" inputmode="numeric"></div>
+        <div class="field"><label for="d-dir">Dirección del local</label><input type="text" id="d-dir" value="Calle Ficticia 1234, Posadas"></div>
+        <div class="field"><label for="d-rubro">Rubro</label><select id="d-rubro"></select></div>
+        <div class="field"><label for="d-m2">Superficie (m²)</label><input type="number" id="d-m2" min="1" value="120" inputmode="numeric"></div>
+      </div>
+      <div class="nav-row"><span></span><button class="btn" type="button" data-go="1">Continuar <span class="arr" aria-hidden="true">→</span></button></div>
+    </div>
+    <div class="step-body" id="step-1" hidden>
+      <h3>Local y documentos</h3>
+      <div class="grid2" style="grid-template-columns: 1fr">
+        <div class="check"><input type="checkbox" id="d-previo" checked><label for="d-previo">En este mismo local ya funcionó un comercio habilitado</label></div>
+        <div class="field" id="d-previo-rubro-wrap" style="max-width: 420px"><label for="d-previo-rubro">Rubro del comercio anterior</label><select id="d-previo-rubro"></select></div>
+        <div class="check"><input type="checkbox" id="d-obras"><label for="d-obras">Voy a hacer cambios en la estructura del local (paredes, ampliaciones)</label></div>
+      </div>
+      <div class="reuse" id="reuse-box"></div>
+      <div class="nav-row"><button class="btn ghost" type="button" data-go="0">Volver</button><button class="btn" type="button" data-go="2">Continuar <span class="arr" aria-hidden="true">→</span></button></div>
+    </div>
+    <div class="step-body" id="step-2" hidden>
+      <div class="head" style="gap: 6px">
+        <h3>Declaración Jurada</h3>
+        <p class="note">Declaro bajo juramento que el local cumple con:</p>
+      </div>
+      <div class="grid2" id="dj-list"></div>
+      <p class="note">Si algún dato es falso, corresponde la clausura inmediata y la denuncia ante la justicia.</p>
+      <div class="nav-row"><button class="btn ghost" type="button" data-go="1">Volver</button><button class="btn" type="button" id="dj-submit" data-go="3">Firmar y enviar</button></div>
+    </div>
+    <div class="step-body bare" id="step-3" hidden>
+      <div id="dj-result"></div>
+      <div class="nav-row"><button class="btn ghost" type="button" data-go="2">Volver</button><button class="btn ghost" type="button" id="demo-reset">Empezar de nuevo</button></div>
+    </div>
+  </section>
+
+  <!-- MANUALES -->
+  <section class="view compact" id="v-manuales" data-view="manuales" hidden>
+    <div class="head">
+      <span class="label">Manuales gratuitos</span>
+      <h2>Lo que necesitás para abrir, por rubro</h2>
+      <p class="lead">Un manual por rubro, gratis, para que nadie tenga que pagarle a un gestor por una copia. Estas fichas muestran la estructura; el contenido final lo tiene que redactar y validar el área técnica municipal.</p>
+    </div>
+    <div class="lib-tools">
+      <input type="text" id="m-search" placeholder="Buscar rubro, por ejemplo: peluquería" aria-label="Buscar manual">
+      <div class="chips" id="m-chips"></div>
+    </div>
+    <div class="man-detail" id="m-detail" hidden></div>
+    <div class="lib" id="m-lib"></div>
+  </section>
+
+</main>
+
+<footer class="foot" id="pie">
+  <div class="wrap">
+    <p>Reglas Claras · prototipo de plataforma para el proyecto de ordenanza de habilitación comercial en Posadas. No es un sitio de la Municipalidad.</p>
+    <p>Los nombres, montos y plazos actuales que aparecen son ejemplos y deben reemplazarse por datos oficiales.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // Rubros: riesgo "bajo" se encuadra por superficie; "critico" siempre es C
+  var RUBROS = [
+    { id: "kiosco", n: "Kiosco o despensa", r: "bajo" },
+    { id: "ropa", n: "Indumentaria y calzado", r: "bajo" },
+    { id: "oficina", n: "Oficina o servicios profesionales", r: "bajo" },
+    { id: "libreria", n: "Librería y papelería", r: "bajo" },
+    { id: "pelu", n: "Peluquería, barbería o estética", r: "bajo" },
+    { id: "gastro", n: "Gastronomía chica (pizzería, bar, rotisería)", r: "bajo", gastro: true },
+    { id: "minorista", n: "Otro comercio minorista no alimentario", r: "bajo" },
+    { id: "fabrica", n: "Fábrica o planta de alimentos", r: "critico" },
+    { id: "deposito", n: "Depósito de materiales peligrosos o inflamables", r: "critico" },
+    { id: "clinica", n: "Clínica o sanatorio con internación", r: "critico" },
+    { id: "guarderia", n: "Guardería o jardín maternal", r: "critico" },
+    { id: "hotel", n: "Hotel de gran escala", r: "critico" }
+  ];
+  var RIESGO_ORDEN = { bajo: 0, critico: 2 };
+  function rubro(id) { return RUBROS.find(function (x) { return x.id === id; }) || RUBROS[0]; }
+
+  function categoria(rid, m2) {
+    var r = rubro(rid);
+    if (r.r === "critico" || m2 > 800) return "C";
+    if (m2 > 300) return "B";
+    return "A";
+  }
+  var CAT = {
+    A: { titulo: "Categoría A", riesgo: "Bajo riesgo", pill: "ok", pillTxt: "Abre en el acto", insp: "Posterior a la apertura", emision: "En el acto, con certificado digital", esperaMeses: 0 },
+    B: { titulo: "Categoría B", riesgo: "Riesgo moderado", pill: "warn", pillTxt: "Respuesta en 3 días hábiles", insp: "Revisión de carpeta y control posterior", emision: "Hasta 3 días hábiles con carpeta completa", esperaMeses: 0.15 },
+    C: { titulo: "Categoría C", riesgo: "Riesgo crítico", pill: "crit", pillTxt: "Inspección previa", insp: "Previa y obligatoria", emision: "Después del dictamen favorable", esperaMeses: null }
+  };
+
+  var ars = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
+  function num(id) { var v = parseFloat(document.getElementById(id).value); return isFinite(v) && v >= 0 ? v : 0; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  var desktop = window.matchMedia("(min-width: 768px)");
+
+  function fillSelect(sel, value) {
+    sel.innerHTML = RUBROS.map(function (r) { return '<option value="' + r.id + '">' + esc(r.n) + "</option>"; }).join("");
+    sel.value = value;
+  }
+
+  // Reinicia la animación de entrada escalonada en los hijos de un elemento
+  function animateIn(el) {
+    Array.prototype.forEach.call(el.children, function (c, i) { c.style.setProperty("--i", Math.min(i, 6)); });
+    el.classList.remove("enter");
+    void el.offsetWidth;
+    el.classList.add("enter");
+  }
+  function fadeIn(el) { el.classList.remove("fade-in"); void el.offsetWidth; el.classList.add("fade-in"); }
+
+  /* ---------- Navegación ---------- */
+  var VIEWS = ["inicio", "simulador", "tramite", "manuales"];
+  var current = null;
+  function show(v) {
+    if (VIEWS.indexOf(v) < 0) v = "inicio";
+    if (v === current) return;
+    current = v;
+    document.querySelectorAll("section.view").forEach(function (s) {
+      s.hidden = s.dataset.view !== v;
+      if (!s.hidden) animateIn(s);
+    });
+    document.querySelectorAll("nav.tabs a").forEach(function (a) {
+      if (a.dataset.view === v) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    });
+    updateFloat();
+    try { localStorage.setItem("rc-view", v); } catch (e) {}
+  }
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    var v = a.getAttribute("href").slice(1);
+    if (VIEWS.indexOf(v) >= 0) { e.preventDefault(); window.scrollTo({ top: 0 }); show(v); try { history.replaceState(null, "", "#" + v); } catch (err) {} }
+  });
+  window.addEventListener("hashchange", function () { show(location.hash.slice(1)); });
+
+  /* ---------- Simulador ---------- */
+  var sRubro = document.getElementById("s-rubro");
+  fillSelect(sRubro, "libreria");
+  var lastCat = null;
+  function simular() {
+    var rid = sRubro.value, r = rubro(rid), m2 = num("s-m2");
+    var c = categoria(rid, m2), info = CAT[c];
+    var mensual = num("s-alquiler") + num("s-servicios");
+    var mesesHoy = num("s-meses");
+    var gestor = document.getElementById("s-gestor").checked ? 100 * num("s-dolar") : 0;
+    var hoy = mensual * mesesHoy + gestor;
+    var mesesRC = info.esperaMeses === null ? mesesHoy : info.esperaMeses;
+    var rc = mensual * mesesRC;
+    var tasa = num("s-tasa") * 12;
+    var ahorro = Math.max(0, hoy - rc) + tasa;
+    var max = Math.max(hoy, rc, 1);
+
+    var motivo;
+    if (r.r === "critico") motivo = "El rubro está en la lista de actividades de riesgo crítico, sin importar la superficie.";
+    else if (m2 > 800) motivo = "Supera los 800 m², el límite de las categorías A y B.";
+    else if (m2 > 300) motivo = "Está entre 300 y 800 m² y el rubro no es de riesgo crítico.";
+    else motivo = "Tiene hasta 300 m² y el rubro es de bajo riesgo.";
+    if (r.gastro && c === "A") motivo += " La gastronomía de pequeña escala pasa a considerarse de baja complejidad.";
+
+    var box = document.getElementById("sim-result");
+    if (!box.firstChild) {
+      box.innerHTML =
+        '<div class="verdict"><div class="big" id="r-big"></div><div class="verdict-text"><div><h3 id="r-tit"></h3><span class="label" id="r-riesgo"></span></div><span id="r-pill"></span></div></div>' +
+        '<p class="note motivo" id="r-mot"></p>' +
+        '<div class="facts">' +
+          '<div class="fact"><span class="label">Superficie</span><span class="v mono" id="r-m2"></span></div>' +
+          '<div class="fact"><span class="label">Inspección</span><span class="v" id="r-insp"></span></div>' +
+          '<div class="fact"><span class="label">Certificado</span><span class="v" id="r-emi"></span></div>' +
+        '</div>' +
+        '<div class="money"><span class="label">Costo de esperar para abrir</span>' +
+          '<div class="bar-row"><span>Sistema actual</span><span class="track"><i id="r-b1"></i></span><b class="mono" id="r-v1"></b></div>' +
+          '<div class="bar-row"><span>Reglas Claras</span><span class="track"><i class="y" id="r-b2"></i></span><b class="mono" id="r-v2"></b></div>' +
+          '<p class="note" id="r-cnote" hidden>En la categoría C la inspección previa se mantiene, así que la espera no cambia. Sí se aplican los manuales gratuitos y la exención de la tasa.</p>' +
+        '</div>' +
+        '<div class="saving"><span class="label" style="color: var(--on-yellow); opacity: .7">Ahorro estimado en el primer año</span><span class="num mono" id="r-ah"></span>' +
+          '<span class="note" id="r-ahn" style="color: var(--ink-2)"></span>' +
+          '<span class="sample-tag">Calculado con valores de ejemplo</span></div>';
+    }
+    var big = document.getElementById("r-big");
+    big.textContent = c;
+    if (lastCat !== null && lastCat !== c) { big.classList.remove("pop"); void big.offsetWidth; big.classList.add("pop"); }
+    lastCat = c;
+    document.getElementById("r-tit").textContent = info.titulo;
+    document.getElementById("r-riesgo").textContent = info.riesgo;
+    document.getElementById("r-mot").textContent = motivo;
+    document.getElementById("r-pill").className = "pill " + info.pill;
+    document.getElementById("r-pill").textContent = info.pillTxt;
+    document.getElementById("r-m2").textContent = m2.toLocaleString("es-AR") + " m²";
+    document.getElementById("r-insp").textContent = info.insp;
+    document.getElementById("r-emi").textContent = info.emision;
+    document.getElementById("r-b1").style.width = (hoy / max * 100).toFixed(1) + "%";
+    document.getElementById("r-b2").style.width = (rc / max * 100).toFixed(1) + "%";
+    document.getElementById("r-v1").textContent = ars.format(hoy);
+    document.getElementById("r-v2").textContent = ars.format(rc);
+    document.getElementById("r-cnote").hidden = c !== "C";
+    document.getElementById("r-ah").textContent = ars.format(ahorro);
+    document.getElementById("r-ahn").textContent = "Incluye la espera evitada, el gestor que no hace falta y 12 meses sin Tasa de Comercio (" + ars.format(tasa) + ").";
+    document.getElementById("f-cat").textContent = c;
+    document.getElementById("f-ah").textContent = ars.format(ahorro);
+  }
+  var simEl = document.getElementById("sim");
+  simEl.addEventListener("input", simular);
+  simEl.addEventListener("change", simular);
+  simular();
+
+  // Resumen flotante: en celular, visible mientras el resultado está fuera de la pantalla
+  var floatBtn = document.getElementById("sim-float");
+  var resultVisible = true, endVisible = false;
+  function updateFloat() {
+    var on = current === "simulador" && !desktop.matches && !resultVisible && !endVisible;
+    floatBtn.classList.toggle("off", !on);
+  }
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (entries) {
+      resultVisible = entries[0].isIntersecting;
+      updateFloat();
+    }, { rootMargin: "-60px 0px -140px 0px" }).observe(document.getElementById("sim-result"));
+    // Al llegar a la nota final y al pie, el globo se esconde para no tapar esos renglones
+    var endSeen = {};
+    var endObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { endSeen[en.target.id] = en.isIntersecting; });
+      endVisible = endSeen["sim-end"] || endSeen["pie"];
+      updateFloat();
+    }, { rootMargin: "0px 0px -60px 0px" });
+    endObs.observe(document.getElementById("sim-end"));
+    endObs.observe(document.getElementById("pie"));
+  }
+  if (desktop.addEventListener) desktop.addEventListener("change", updateFloat);
+  floatBtn.addEventListener("click", function () {
+    document.getElementById("sim-result").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  /* ---------- Demo del trámite ---------- */
+  var dRubro = document.getElementById("d-rubro"), dPrev = document.getElementById("d-previo-rubro");
+  fillSelect(dRubro, "libreria");
+  fillSelect(dPrev, "ropa");
+  var CERTS = ["Certificado de desinfección y control de plagas", "Limpieza y desinfección del tanque de agua", "Certificado de Bomberos y plan de evacuación", "Plano del local aprobado"];
+  var DJ = [
+    "Uso del suelo permitido para el rubro en esa dirección",
+    "Matafuegos con carga vigente y señalización de salida",
+    "Instalación eléctrica segura, con disyuntor y térmica",
+    "Higiene, ventilación e iluminación adecuadas",
+    "Sanitario disponible para el personal",
+    "Código Alimentario Argentino, si se manipulan alimentos"
+  ];
+  var STEP_NAMES = ["Datos del comercio", "Local y documentos", "Declaración Jurada", "Resultado"];
+  document.getElementById("dj-list").innerHTML = DJ.map(function (t, i) {
+    return '<div class="check"><input type="checkbox" id="dj-' + i + '" checked><label for="dj-' + i + '">' + esc(t) + '</label></div>';
+  }).join("") + '<div class="check" style="grid-column: 1 / -1; padding-top: 8px"><input type="checkbox" id="dj-firma" checked><label for="dj-firma"><b>Declaro que los datos son verdaderos y asumo la responsabilidad</b></label></div>';
+
+  function reuse() {
+    var box = document.getElementById("reuse-box");
+    var previo = document.getElementById("d-previo").checked;
+    document.getElementById("d-previo-rubro-wrap").hidden = !previo;
+    if (!previo) { box.innerHTML = '<p class="note">Local nuevo: hay que presentar toda la documentación técnica.</p>'; fadeIn(box); return; }
+    var obras = document.getElementById("d-obras").checked;
+    var nuevo = rubro(dRubro.value), viejo = rubro(dPrev.value);
+    var sube = RIESGO_ORDEN[nuevo.r] > RIESGO_ORDEN[viejo.r];
+    if (obras || sube) {
+      box.innerHTML = '<span class="pill warn">Sin portabilidad</span><p class="note">' +
+        (obras ? "Hay cambios en la estructura del local, así que los certificados anteriores no se pueden reutilizar." : "El nuevo rubro tiene más riesgo que el anterior, así que no hereda la documentación. Un depósito peligroso no hereda el plano de una librería.") + '</p>';
+    } else {
+      box.innerHTML = '<span class="pill ok">Portabilidad documental</span><p class="note">Se reutilizan los certificados vigentes del comercio anterior:</p><ul>' +
+        CERTS.map(function (c) { return '<li><span class="pill neutral">Vigente</span><span>' + esc(c) + '</span></li>'; }).join("") + '</ul>';
+    }
+    fadeIn(box);
+  }
+  ["d-previo", "d-obras", "d-previo-rubro", "d-rubro"].forEach(function (id) { document.getElementById(id).addEventListener("change", reuse); });
+  reuse();
+
+  function djOk() {
+    var all = DJ.every(function (_, i) { return document.getElementById("dj-" + i).checked; }) && document.getElementById("dj-firma").checked;
+    document.getElementById("dj-submit").disabled = !all;
+    return all;
+  }
+  document.getElementById("dj-list").addEventListener("change", djOk);
+
+  function sumarHabiles(d, n) {
+    var x = new Date(d);
+    while (n > 0) { x.setDate(x.getDate() + 1); var w = x.getDay(); if (w !== 0 && w !== 6) n--; }
+    return x;
+  }
+  var fecha = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "long", year: "numeric" });
+
+  function resultado() {
+    var v = function (id) { return document.getElementById(id).value; };
+    var m2 = num("d-m2"), c = categoria(dRubro.value, m2), hoy = new Date();
+    var estado, extra;
+    if (c === "A") {
+      estado = '<span class="pill ok">Habilitado en el acto</span>';
+      extra = "Podés abrir hoy. Un inspector va a verificar lo declarado más adelante. Si encuentra faltas menores, te da un plazo para corregirlas sin cerrar el local.";
+    } else if (c === "B") {
+      estado = '<span class="pill warn">En evaluación</span>';
+      extra = "El Municipio debe responder antes del " + fecha.format(sumarHabiles(hoy, 3)) + " (3 días hábiles), si la carpeta está completa.";
+    } else {
+      estado = '<span class="pill crit">Requiere inspección previa</span>';
+      extra = "Por el rubro o la superficie, el local se inspecciona antes de abrir. Se asigna un turno de inspección.";
+    }
+    var titulo = c === "A" ? "Certificado de habilitación" : "Constancia de inicio de trámite";
+    document.getElementById("dj-result").innerHTML =
+      '<div class="cert"><div class="cert-head"><h3 style="font-size: clamp(1.05rem, 3vw, 1.4rem)">' + titulo + '</h3><span class="mono">DEMO-' + String(hoy.getTime()).slice(-6) + '</span></div>' +
+      '<div>' + estado + '</div>' +
+      '<dl><dt>Comercio</dt><dd>' + esc(v("d-nombre")) + '</dd><dt>Titular</dt><dd>' + esc(v("d-titular")) + ' · <span class="mono">' + esc(v("d-cuit")) + '</span></dd>' +
+      '<dt>Dirección</dt><dd>' + esc(v("d-dir")) + '</dd><dt>Rubro</dt><dd>' + esc(rubro(dRubro.value).n) + '</dd>' +
+      '<dt>Superficie</dt><dd class="mono">' + m2.toLocaleString("es-AR") + ' m² · Categoría ' + c + '</dd><dt>Fecha</dt><dd>' + fecha.format(hoy) + '</dd>' +
+      '<dt>Tasa de Comercio</dt><dd>Exenta los primeros 12 meses</dd></dl>' +
+      '<p class="note">' + extra + '</p></div>';
+  }
+
+  var stepStarted = false;
+  function go(n) {
+    if (n === 3 && !djOk()) return;
+    if (n === 3) resultado();
+    for (var i = 0; i < 4; i++) {
+      var el = document.getElementById("step-" + i);
+      el.hidden = i !== n;
+      if (i === n) fadeIn(el);
+    }
+    document.querySelectorAll("#stepper li").forEach(function (li) {
+      var s = +li.dataset.step;
+      li.className = s === n ? "now" : (s < n ? "done" : "");
+    });
+    document.getElementById("step-now").textContent = "Paso " + (n + 1) + " de 4 · " + STEP_NAMES[n];
+    // En celular, volver al inicio del paso para que no quede a mitad de pantalla
+    if (stepStarted) document.getElementById("stepper").scrollIntoView({ behavior: "smooth", block: "start" });
+    stepStarted = true;
+  }
+  document.getElementById("v-tramite").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-go]");
+    if (b) go(+b.dataset.go);
+  });
+  document.getElementById("demo-reset").addEventListener("click", function () { go(0); });
+  go(0);
+
+  /* ---------- Manuales ---------- */
+  var BASE = {
+    seg: { t: "Seguridad e incendio", i: ["Matafuegos adecuados al riesgo, con carga vigente y a la vista", "Señalización de salida y luces de emergencia", "Instalación eléctrica con disyuntor diferencial y llave térmica", "Plan de evacuación visible para locales con público"] },
+    hig: { t: "Higiene y plagas", i: ["Certificado de desinfección y control de plagas vigente", "Limpieza del tanque de agua con constancia", "Gestión de residuos y recipientes con tapa"] },
+    doc: { t: "Documentación", i: ["Constancia de CUIT y situación ante Rentas Misiones", "Contrato de alquiler o título del local", "Declaración Jurada firmada por el titular"] }
+  };
+  var MANUALES = [
+    { id: "kiosco", n: "Kiosco y despensa", cat: "A", extra: { t: "Alimentos envasados", i: ["Productos con rótulo y fecha de vencimiento", "Heladera con temperatura controlada para lácteos y bebidas", "Separación entre alimentos y artículos de limpieza"] } },
+    { id: "ropa", n: "Indumentaria y calzado", cat: "A", extra: { t: "Local y probadores", i: ["Probadores con ventilación e iluminación", "Pasillos libres para circular", "Depósito ordenado y sin materiales inflamables acumulados"] } },
+    { id: "oficina", n: "Oficina y servicios profesionales", cat: "A", extra: { t: "Atención al público", i: ["Espacio de espera accesible", "Matrícula profesional a la vista cuando corresponda"] } },
+    { id: "libreria", n: "Librería y papelería", cat: "A", extra: { t: "Depósito de papel", i: ["Papel y cartón lejos de fuentes de calor", "Carga de fuego estimada para elegir el matafuegos"] } },
+    { id: "pelu", n: "Peluquería, barbería y estética", cat: "A", extra: { t: "Higiene del servicio", i: ["Esterilización del instrumental y registro de uso", "Descartables para elementos cortantes", "Productos químicos rotulados y guardados"] } },
+    { id: "pizzeria", n: "Pizzería y rotisería", cat: "A", gastro: true, extra: { t: "Manipulación de alimentos", i: ["Carnet de manipulador de alimentos del personal", "Cadena de frío y registro de temperaturas", "Campana y extracción de humos sobre hornos", "Superficies lavables en la zona de elaboración"] } },
+    { id: "bar", n: "Bar de pequeña escala", cat: "A", gastro: true, extra: { t: "Servicio y público", i: ["Carnet de manipulador de alimentos del personal", "Sanitarios para el público", "Capacidad máxima de personas a la vista"] } },
+    { id: "deposito", n: "Depósito de materiales inflamables", cat: "C", extra: { t: "Requisitos especiales", i: ["Inspección previa obligatoria antes de abrir", "Estudio de carga de fuego firmado por profesional", "Ventilación y almacenamiento según tipo de material"] } }
+  ];
+  var filtro = "todos";
+  var FILTROS = [["todos", "Todos"], ["A", "Categoría A"], ["gastro", "Gastronomía"], ["C", "Categoría C"]];
+  var chips = document.getElementById("m-chips");
+  chips.innerHTML = FILTROS.map(function (f) { return '<button type="button" class="chip" data-f="' + f[0] + '" aria-pressed="' + (f[0] === filtro) + '">' + f[1] + '</button>'; }).join("");
+  chips.addEventListener("click", function (e) {
+    var b = e.target.closest(".chip"); if (!b) return;
+    filtro = b.dataset.f;
+    chips.querySelectorAll(".chip").forEach(function (c) { c.setAttribute("aria-pressed", String(c.dataset.f === filtro)); });
+    renderLib(true);
+  });
+  document.getElementById("m-search").addEventListener("input", function () { renderLib(false); });
+
+  function capitulos(m) { return [BASE.doc, BASE.seg, BASE.hig, m.extra]; }
+  function renderLib(anim) {
+    var q = document.getElementById("m-search").value.trim().toLowerCase();
+    var list = MANUALES.filter(function (m) {
+      var okF = filtro === "todos" || (filtro === "gastro" ? m.gastro : m.cat === filtro);
+      return okF && (!q || m.n.toLowerCase().indexOf(q) >= 0);
+    });
+    var lib = document.getElementById("m-lib");
+    lib.innerHTML = list.length ? list.map(function (m) {
+      var n = capitulos(m).reduce(function (a, c) { return a + c.i.length; }, 0);
+      var idx = MANUALES.indexOf(m) + 1;
+      return '<button type="button" class="man" data-m="' + m.id + '"><span class="code">MAN-' + String(idx).padStart(2, "0") + '</span><h3>' + esc(m.n) + '</h3>' +
+        '<div class="meta"><span class="pill ' + (m.cat === "C" ? "crit" : "ok") + '">Categoría ' + m.cat + '</span><span class="pill neutral">Borrador</span></div>' +
+        '<span class="note">4 capítulos · ' + n + ' puntos a cumplir</span></button>';
+    }).join("") : '<div class="empty">No hay manuales para esa búsqueda todavía.</div>';
+    if (anim) animateIn(lib);
+  }
+  document.getElementById("m-lib").addEventListener("click", function (e) {
+    var b = e.target.closest(".man"); if (!b) return;
+    var m = MANUALES.find(function (x) { return x.id === b.dataset.m; });
+    var d = document.getElementById("m-detail");
+    d.hidden = false;
+    d.innerHTML = '<div class="md-head"><div class="head" style="gap:6px"><span class="label">Manual · Categoría ' + m.cat + '</span><h2>' + esc(m.n) + '</h2></div>' +
+      '<button type="button" class="btn ghost" id="m-close">Cerrar</button></div>' +
+      '<p class="note">Estructura de ejemplo. Cada punto debe ser revisado por el área técnica municipal antes de publicarse.</p>' +
+      '<div class="chapters">' + capitulos(m).map(function (c, i) {
+        return '<div class="chapter"><h3><span class="mono" style="color: var(--violet)">' + (i + 1) + '.</span> ' + esc(c.t) + '</h3><ul>' + c.i.map(function (t, j) {
+          var id = "mc-" + m.id + "-" + i + "-" + j;
+          return '<li class="check"><input type="checkbox" id="' + id + '"><label for="' + id + '">' + esc(t) + '</label></li>';
+        }).join("") + '</ul></div>';
+      }).join("") + '</div>';
+    fadeIn(d);
+    d.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById("m-close").addEventListener("click", function () { d.hidden = true; b.focus(); });
+  });
+  renderLib(false);
+
+  /* ---------- Vista inicial ---------- */
+  var start = location.hash.slice(1);
+  if (VIEWS.indexOf(start) < 0) { try { start = localStorage.getItem("rc-view") || "inicio"; } catch (e) { start = "inicio"; } }
+  show(start);
+})();
+</script>
+
+</body>
+</html>
